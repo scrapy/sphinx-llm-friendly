@@ -2,7 +2,7 @@
 Release notes
 =============
 
-0.3.0 (unreleased)
+0.3.0 (2026-09-24)
 ==================
 
 -   The Markdown pages, ``llms.txt`` and ``llms-full.txt`` are now written by
