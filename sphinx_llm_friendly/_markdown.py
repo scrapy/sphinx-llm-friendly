@@ -5,6 +5,9 @@ from pathlib import Path
 from types import MethodType
 from typing import TYPE_CHECKING
 
+import tiktoken
+from sphinx.util import logging
+
 from ._exclude import is_excluded
 from ._llm import prepare_doctree_for_llm
 from ._translator import MarkdownTranslator
@@ -14,6 +17,8 @@ if TYPE_CHECKING:
     from sphinx.application import Sphinx
     from sphinx.builders.html import StandaloneHTMLBuilder
     from sphinx.environment import BuildEnvironment
+
+logger = logging.getLogger(__name__)
 
 
 def _render(app: Sphinx, doctree: nodes.document, single_file: bool = False) -> str:
@@ -78,6 +83,18 @@ def write_llms_full_txt(app: Sphinx) -> None:
     # Normalize whitespace while keeping paragraph breaks intact.
     content = re.sub(r"[ \t]+\n", "\n", content)
     content = re.sub(r"\n{3,}", "\n\n", content)
-    Path(app.outdir, "llms-full.txt").write_text(
-        content.strip() + "\n", encoding="utf-8"
-    )
+    content = content.strip() + "\n"
+    path = Path(app.outdir, "llms-full.txt")
+    path.write_text(content, encoding="utf-8")
+
+    max_tokens = app.config.llm_friendly_llms_full_txt_max_tokens
+    if max_tokens is None:
+        return
+    tokens = len(tiktoken.get_encoding("cl100k_base").encode(content))
+    if tokens > max_tokens:
+        logger.warning(
+            f"{path} has {tokens:,} tokens, over the "
+            f"llm_friendly_llms_full_txt_max_tokens limit of {max_tokens:,}.",
+            type="llm_friendly",
+            subtype="max_tokens",
+        )

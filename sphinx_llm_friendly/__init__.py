@@ -197,6 +197,12 @@ def setup(app: Sphinx) -> ExtensionMetadata:
         "llm_friendly_llms_full_txt_exclude", [], "", types=frozenset({list})
     )
     app.add_config_value(
+        "llm_friendly_llms_full_txt_max_tokens",
+        200_000,
+        "",
+        types=frozenset({int, type(None)}),
+    )
+    app.add_config_value(
         "llm_friendly_llms_txt_summary",
         None,
         "html",

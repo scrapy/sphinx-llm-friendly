@@ -56,6 +56,12 @@ Configuration
     List of patterns, with the syntax of ``exclude_patterns``, of documents to
     leave out of ``llms-full.txt`` only. Default: ``[]``.
 
+``llm_friendly_llms_full_txt_max_tokens``
+    Maximum number of tokens of ``llms-full.txt``, counted with the
+    ``cl100k_base`` encoding of
+    `tiktoken <https://github.com/openai/tiktoken>`_. Exceeding it logs a
+    warning. ``None`` lifts the limit. Default: ``200_000``.
+
 ``llm_friendly_llms_txt_summary``
     Summary for ``llms.txt``. Default: the first paragraph of the root
     document.
@@ -65,7 +71,9 @@ Configuration
     from the root document. Default: ``False``.
 
 To leave content out of the Markdown output, give it the
-``llm-friendly-exclude`` class, e.g. with the ``container`` directive.
+``llm-friendly-exclude`` class, e.g. with the ``container`` directive. For a
+sphinx-design tab, use the ``class-label`` or ``class-content`` option of
+``tab-item``.
 
 For the Markdown output, the ``only`` directive evaluates its expression with
 the ``llm`` tag instead of ``html``, e.g. use ``.. only:: llm`` for content to

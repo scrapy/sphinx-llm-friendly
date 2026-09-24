@@ -10,6 +10,7 @@ dependencies = [
     "docutils",
     "sphinx>=7.4",
     "tabulate",
+    "tiktoken",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

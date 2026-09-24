@@ -141,7 +141,7 @@ def test_markdown(tmp_path: Path) -> None:
     assert "Source: /news.md" not in llms_full
 
 
-def test_sphinx_design(tmp_path: Path) -> None:
+def test_sphinx_design(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     source = _project(tmp_path, 'extensions.append("sphinx_design")\n')
     (source / "news.rst").write_text(
         "News\n====\n\n"
@@ -149,14 +149,55 @@ def test_sphinx_design(tmp_path: Path) -> None:
         ".. dropdown::\n\n   Untitled.\n\n"
         ".. tab-set::\n\n"
         "   .. tab-item:: Tab 1\n\n      One.\n\n"
-        "   .. tab-item:: Tab 2\n\n      Two.\n",
+        "   .. tab-item:: Tab 2\n\n      Two.\n\n"
+        ".. meta::\n   :description: Meta.\n\n"
+        ".. button-ref:: guide/page1\n",
         encoding="utf-8",
     )
     output = _build(source, "html")
     assert (output / "news.md").read_text(encoding="utf-8") == (
         "# News\n\n### Title\n\nDropdown.\n\nUntitled.\n\n"
-        "### Tab 1\n\nOne.\n\n### Tab 2\n\nTwo.\n"
+        "### Tab 1\n\nOne.\n\n### Tab 2\n\nTwo.\n\n[Page 1](guide/page1.md)\n"
     )
+    assert "unknown node type" not in capsys.readouterr().err
+
+
+def test_sphinx_design_excluded_tabs(tmp_path: Path) -> None:
+    source = _project(tmp_path, 'extensions.append("sphinx_design")\n')
+    (source / "news.rst").write_text(
+        "News\n====\n\n"
+        ".. tab-set::\n\n"
+        "   .. tab-item:: Tab 1\n      :class-label: llm-friendly-exclude\n\n"
+        "      One.\n\n"
+        "   .. tab-item:: Tab 2\n\n      Two.\n\n"
+        ".. tab-set::\n\n"
+        "   .. tab-item:: Tab 3\n      :class-content: llm-friendly-exclude\n\n"
+        "      Three.\n",
+        encoding="utf-8",
+    )
+    output = _build(source, "html")
+    assert (output / "news.md").read_text(encoding="utf-8") == (
+        "# News\n\n### Tab 2\n\nTwo.\n"
+    )
+    html = (output / "news.html").read_text(encoding="utf-8")
+    assert "Tab 1" in html
+    assert "Three." in html
+
+
+@pytest.mark.parametrize(("max_tokens", "warns"), [(1, True), (None, False)])
+def test_llms_full_txt_max_tokens(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    max_tokens: int | None,
+    warns: bool,
+) -> None:
+    conf = f"llm_friendly_llms_full_txt_max_tokens = {max_tokens}\n"
+    output = _build(_project(tmp_path, conf), "html")
+    assert (output / "llms-full.txt").exists()
+    assert (
+        "over the llm_friendly_llms_full_txt_max_tokens limit of 1."
+        in capsys.readouterr().err
+    ) is warns
 
 
 def test_only(tmp_path: Path) -> None:

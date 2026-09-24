@@ -89,6 +89,7 @@ PREDEFINED_ELEMENTS: dict[str, PushContext[Any] | PushBox | UniqueString | None]
     nbplot_container=SKIP,
     code_links=SKIP,
     index=SKIP,
+    meta=SKIP,
     substitution_definition=SKIP,  # the doctree already contains the text with substitutions applied.
     runrole_reference=SKIP,
     toctree=SKIP,
@@ -97,6 +98,7 @@ PREDEFINED_ELEMENTS: dict[str, PushContext[Any] | PushBox | UniqueString | None]
     document=None,
     container=None,
     inline=None,
+    PassthroughTextElement=None,  # sphinx-design
     abbreviation=None,
     definition_list=None,
     definition_list_item=None,

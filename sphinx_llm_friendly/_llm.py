@@ -14,6 +14,10 @@ def _remove_node(node: nodes.Node) -> None:
         node.parent.remove(node)
 
 
+def _is_excluded(node: nodes.Node) -> bool:
+    return isinstance(node, nodes.Element) and "llm-friendly-exclude" in node["classes"]
+
+
 def _is_nav_artifact_list_item(node: nodes.Element) -> bool:
     return any(
         posixpath.basename(reference.get("refuri", "")) in _NAV_ARTIFACT_PAGES
@@ -80,6 +84,8 @@ def _undo_sphinx_design_changes(doc: nodes.document) -> None:
         tabs = tab_set.children
         children = []
         for label, content in zip(tabs[1::3], tabs[2::3], strict=False):
+            if _is_excluded(label) or _is_excluded(content):
+                continue
             children += [nodes.rubric("", "", *label.children), *content.children]
         tab_set.parent.replace(tab_set, children)
 
@@ -117,7 +123,7 @@ def prepare_doctree_for_llm(doc: nodes.document) -> nodes.document:
         for node in list(llm_doc.findall(node_type)):
             _remove_node(node)
     for element in list(llm_doc.findall(nodes.Element)):
-        if "llm-friendly-exclude" in element["classes"]:
+        if _is_excluded(element):
             _remove_node(element)
     _remove_nav_artifact_lists(llm_doc)
     _prune_empty_containers(llm_doc)
