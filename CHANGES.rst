@@ -2,7 +2,7 @@
 Release notes
 =============
 
-0.2.0 (unreleased)
+0.2.0 (2026-09-24)
 ==================
 
 Added the ``llm_friendly_llms_full_txt_exclude`` setting, to leave documents
