@@ -67,6 +67,11 @@ Configuration
 To leave content out of the Markdown output, give it the
 ``llm-friendly-exclude`` class, e.g. with the ``container`` directive.
 
+For the Markdown output, the ``only`` directive evaluates its expression with
+the ``llm`` tag instead of ``html``, e.g. use ``.. only:: llm`` for content to
+include only in the Markdown output, and ``.. only:: not llm`` for content to
+leave out of it.
+
 Nodes from third-party extensions that are still in the doctree when HTML is
 written need Markdown handlers, registered with ``app.add_node()`` as
 ``llm_markdown``.

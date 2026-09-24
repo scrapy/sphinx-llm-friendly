@@ -11,6 +11,7 @@ from ._exclude import is_excluded
 from ._intersphinx import find_markdown_sites
 from ._llms_txt import write_llms_txt
 from ._markdown import write_llms_full_txt, write_markdown
+from ._only import setup_only
 
 if TYPE_CHECKING:
     from docutils import nodes
@@ -204,6 +205,8 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     app.add_config_value(
         "llm_friendly_llms_txt_toctree_only", False, "html", types=frozenset({bool})
     )
+
+    setup_only(app)
 
     # After sphinx.ext.intersphinx loads its inventories.
     app.connect("builder-inited", _on_builder_inited, priority=900)

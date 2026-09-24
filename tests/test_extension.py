@@ -141,6 +141,44 @@ def test_markdown(tmp_path: Path) -> None:
     assert "Source: /news.md" not in llms_full
 
 
+def test_sphinx_design(tmp_path: Path) -> None:
+    source = _project(tmp_path, 'extensions.append("sphinx_design")\n')
+    (source / "news.rst").write_text(
+        "News\n====\n\n"
+        ".. dropdown:: Title\n\n   Dropdown.\n\n"
+        ".. dropdown::\n\n   Untitled.\n\n"
+        ".. tab-set::\n\n"
+        "   .. tab-item:: Tab 1\n\n      One.\n\n"
+        "   .. tab-item:: Tab 2\n\n      Two.\n",
+        encoding="utf-8",
+    )
+    output = _build(source, "html")
+    assert (output / "news.md").read_text(encoding="utf-8") == (
+        "# News\n\n### Title\n\nDropdown.\n\nUntitled.\n\n"
+        "### Tab 1\n\nOne.\n\n### Tab 2\n\nTwo.\n"
+    )
+
+
+def test_only(tmp_path: Path) -> None:
+    source = _project(tmp_path)
+    (source / "news.rst").write_text(
+        "News\n====\n\n"
+        ".. only:: not llm\n\n   HTML.\n\n"
+        ".. only:: llm\n\n   Markdown.\n\n"
+        ".. only:: html or llm\n\n   Both.\n",
+        encoding="utf-8",
+    )
+    output = _build(source, "html")
+    assert (output / "news.md").read_text(encoding="utf-8") == (
+        "# News\n\nMarkdown.\n\nBoth.\n"
+    )
+    html = (output / "news.html").read_text(encoding="utf-8")
+    assert "HTML." in html
+    assert "Markdown." not in html
+    assert "Both." in html
+    assert "markdown" not in (output / "searchindex.js").read_text(encoding="utf-8")
+
+
 def test_llms_full_txt_exclude(tmp_path: Path) -> None:
     conf = 'llm_friendly_llms_full_txt_exclude = ["guide/page1*"]\n'
     output = _build(_project(tmp_path, conf), "html")

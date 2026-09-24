@@ -4,6 +4,8 @@ import posixpath
 
 from docutils import nodes
 
+from ._only import html_only, markdown_only
+
 _NAV_ARTIFACT_PAGES = frozenset({"genindex.html", "py-modindex.html", "search.html"})
 
 
@@ -55,6 +57,33 @@ def _undo_html_changes(doc: nodes.document) -> None:
             _remove_node(inline.parent)
 
 
+def _undo_sphinx_design_changes(doc: nodes.document) -> None:
+    # sphinx-design turns dropdowns and tab sets into HTML-specific nodes,
+    # which we turn back into rubrics followed by their content.
+    for dropdown in list(doc.findall(nodes.Element)):
+        if type(dropdown).__name__ != "dropdown_main":
+            continue
+        title, body = dropdown.children
+        title_text = next(
+            node
+            for node in title.findall(nodes.inline)
+            if "sd-summary-text" in node["classes"]
+        )
+        children: list[nodes.Node] = list(body.children)
+        if not all(isinstance(child, nodes.raw) for child in title_text.children):
+            children.insert(0, nodes.rubric("", "", *title_text.children))
+        dropdown.parent.replace(dropdown, children)
+    for tab_set in list(doc.findall(nodes.container)):
+        if tab_set.get("design_component") != "tab-set":
+            continue
+        # Each tab is an sd_tab_input, sd_tab_label, content triple.
+        tabs = tab_set.children
+        children = []
+        for label, content in zip(tabs[1::3], tabs[2::3], strict=False):
+            children += [nodes.rubric("", "", *label.children), *content.children]
+        tab_set.parent.replace(tab_set, children)
+
+
 def _prune_empty_containers(doc: nodes.document) -> None:
     changed = True
     while changed:
@@ -79,6 +108,11 @@ def prepare_doctree_for_llm(doc: nodes.document) -> nodes.document:
     """
     llm_doc = doc.deepcopy()
     _undo_html_changes(llm_doc)
+    _undo_sphinx_design_changes(llm_doc)
+    for html_node in list(llm_doc.findall(html_only)):
+        _remove_node(html_node)
+    for markdown_node in list(llm_doc.findall(markdown_only)):
+        markdown_node.parent.replace(markdown_node, markdown_node.children)
     for node_type in (nodes.target, nodes.transition, nodes.comment):
         for node in list(llm_doc.findall(node_type)):
             _remove_node(node)
