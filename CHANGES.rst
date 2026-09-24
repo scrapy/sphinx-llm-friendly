@@ -2,7 +2,7 @@
 Release notes
 =============
 
-0.4.0 (unreleased)
+0.4.0 (2026-09-24)
 ==================
 
 -   For the Markdown output, the ``only`` directive now evaluates its
