@@ -2,6 +2,18 @@
 Release notes
 =============
 
+0.4.0 (unreleased)
+==================
+
+-   For the Markdown output, the ``only`` directive now evaluates its
+    expression with the ``llm`` tag instead of ``html``, e.g. use
+    ``.. only:: llm`` for content to include only in the Markdown output, and
+    ``.. only:: not llm`` for content to leave out of it.
+
+-   Fixed the Markdown output of sphinx-design dropdowns and tab sets, which
+    now become a rubric with their title or tab label, followed by their
+    content.
+
 0.3.0 (2026-09-24)
 ==================
 
