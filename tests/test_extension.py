@@ -284,13 +284,14 @@ def test_internal_references(tmp_path: Path) -> None:
         ".. py:function:: f()\n\n"
         "See :ref:`target`, :py:func:`f` and :ref:`page`.\n\n"
         "See :ref:`foo <target>`, :ref:`target <target>`, :ref:`bar <section>`,\n"
-        ':ref:`baz <page>` and :ref:`"qux" <quoted>`.\n',
+        ':ref:`baz <page>`, :ref:`"qux" <quoted>` and :ref:`numbered <numbered>`.\n',
         encoding="utf-8",
     )
     (source / "guide" / "page1.rst").write_text(
         ".. _page:\n\nPage 1\n======\n\n.. _section:\n\nSection\n-------\n\n"
         "See :ref:`section`, :ref:`page` and :py:func:`f`.\n\n"
-        '.. _quoted:\n\nA "quoted" \\\\ heading\n-----------------------\n',
+        '.. _quoted:\n\nA "quoted" \\\\ heading\n-----------------------\n\n'
+        ".. _numbered:\n\n1. Numbered\n-----------\n",
         encoding="utf-8",
     )
     output = _build(source, "html")
@@ -300,8 +301,9 @@ def test_internal_references(tmp_path: Path) -> None:
     assert "See Target, `f()` and [Page 1](guide/page1.md)." in news
     assert (
         "See foo (see Target), target, "
-        '[bar](guide/page1.md "Section"),\n[baz](guide/page1.md) and '
-        '["qux"](guide/page1.md "A \\"quoted\\" \\\\ heading").'
+        '[bar](guide/page1.md "Section"),\n[baz](guide/page1.md), '
+        '["qux"](guide/page1.md "A \\"quoted\\" \\\\ heading") and '
+        "[numbered](guide/page1.md)."
     ) in news
     llms_full = (output / "llms-full.txt").read_text(encoding="utf-8")
     assert "See foo (see Target), target, bar (see Section)," in llms_full

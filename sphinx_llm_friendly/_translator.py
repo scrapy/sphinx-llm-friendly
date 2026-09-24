@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from sphinx.builders.html import StandaloneHTMLBuilder
 
 VISIT_DEPART_PATTERN = re.compile("(visit|depart)_(.+)")
+_ENUMERATOR = re.compile(r"\d+[.)]\s+")
 SKIP = UniqueString("skip")
 
 DOC_INFO_FIELDS = (
@@ -590,7 +591,8 @@ class MarkdownTranslator(SphinxTranslator):
         heading = self._label_titles.get((docname, label_id), "")
         page_title = self.builder.env.titles.get(docname)
         known = {node.astext(), page_title.astext() if page_title else ""}
-        if heading.casefold() in {text.casefold() for text in known}:
+        unnumbered = _ENUMERATOR.sub("", heading, count=1)
+        if unnumbered.casefold() in {text.casefold() for text in known}:
             return ""
         return heading
 
