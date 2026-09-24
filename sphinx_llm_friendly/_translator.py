@@ -4,10 +4,12 @@ import dataclasses
 import posixpath
 import re
 from collections.abc import Callable
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, TypeVar
 from urllib.parse import urlsplit, urlunsplit
 
 from docutils import nodes
+from sphinx import addnodes
 from sphinx.util.docutils import SphinxTranslator
 
 from ._contexts import (
@@ -145,6 +147,15 @@ def pushing_context(method: _F) -> _F:
 def pushing_status(method: _F) -> _F:
     """Marks method as status context"""
     return _assign_visit_method(method, "__pushing_status__")
+
+
+def _in_signature(node: nodes.Node) -> bool:
+    parent = node.parent
+    while parent is not None:
+        if isinstance(parent, addnodes.desc_signature):
+            return True
+        parent = parent.parent
+    return False
 
 
 class MarkdownTranslator(SphinxTranslator):
@@ -523,25 +534,65 @@ class MarkdownTranslator(SphinxTranslator):
         if not node.get("internal", self.status.default_ref_internal):
             return to_markdown_url(uri)
 
-        # Whatever the URL is, add the anchor to it
-        ref_id = node.get("refid", None)
-        if ref_id is not None:
-            return f"#{ref_id}"
-
+        # The Markdown output has no anchors, so same-page references have no
+        # URL and references to other pages link to the whole page.
+        if node.get("refid") is not None:
+            return ""
         return self._markdown_page_uri(uri)
 
     def _markdown_page_uri(self, uri: str) -> str:
         parts = urlsplit(uri)
+        if not parts.path:
+            return ""
         if not parts.path.endswith(".html"):
             return uri
-        page_uri = self.builder.get_target_uri(self.builder.current_docname)
-        docname = posixpath.normpath(
-            posixpath.join(posixpath.dirname(page_uri), parts.path[:-5])
-        )
+        docname = self._target_docname(parts.path)
         env = self.builder.env
         if docname not in env.found_docs or is_excluded(env, docname):
             return uri
-        return urlunsplit(parts._replace(path=f"{parts.path[:-5]}.md"))
+        if docname == self.builder.current_docname:
+            return ""
+        return urlunsplit(parts._replace(path=f"{parts.path[:-5]}.md", fragment=""))
+
+    def _target_docname(self, path: str) -> str:
+        if not path:
+            return self.builder.current_docname
+        page_uri = self.builder.get_target_uri(self.builder.current_docname)
+        return posixpath.normpath(
+            posixpath.join(posixpath.dirname(page_uri), path.removesuffix(".html"))
+        )
+
+    @cached_property
+    def _label_titles(self) -> dict[tuple[str, str], str]:
+        labels = self.builder.env.get_domain("std").labels  # type: ignore[attr-defined]
+        return {
+            (docname, label_id): title
+            for docname, label_id, title in labels.values()
+            if title
+        }
+
+    def _ref_heading(self, node: nodes.Element) -> str:
+        """Return the heading targeted by the ``:ref:`` reference *node*, if it
+        is neither its text nor the title of its page, which a reader cannot
+        find from the reference alone.
+        """
+        if not any(
+            "std-ref" in child.get("classes", [])
+            for child in node.children
+            if isinstance(child, nodes.Element)
+        ):
+            return ""
+        if refid := node.get("refid"):
+            docname, label_id = self.builder.current_docname, refid
+        else:
+            parts = urlsplit(node.get("refuri", ""))
+            docname, label_id = self._target_docname(parts.path), parts.fragment
+        heading = self._label_titles.get((docname, label_id), "")
+        page_title = self.builder.env.titles.get(docname)
+        known = {node.astext(), page_title.astext() if page_title else ""}
+        if heading.casefold() in {text.casefold() for text in known}:
+            return ""
+        return heading
 
     @pushing_context
     def visit_reference(self, node: nodes.Element) -> None:
@@ -550,12 +601,22 @@ class MarkdownTranslator(SphinxTranslator):
             raise nodes.SkipNode
 
         is_internal = bool(node.get("internal", self.status.default_ref_internal))
-        if self._single_file and is_internal:
-            self._push_context(WrappedContext("", ""))
-            return
-
-        url = self._fetch_ref_uri(node)
-        self._push_context(WrappedContext("[", f"]({url})"))
+        if is_internal:
+            url = "" if self._single_file else self._fetch_ref_uri(node)
+        elif _in_signature(node):
+            url = ""
+        else:
+            url = self._fetch_ref_uri(node)
+        heading = self._ref_heading(node) if is_internal else ""
+        if url:
+            title = heading.replace("\\", "\\\\").replace('"', '\\"')
+            title = f' "{title}"' if title else ""
+            self._push_context(WrappedContext("[", f"]({url}{title})"))
+        else:
+            if heading and self.status.escape_text:
+                heading = escape_markdown_chars(heading)
+            suffix = f" (see {heading})" if heading else ""
+            self._push_context(WrappedContext("", suffix))
 
     def visit_pending_xref(self, node: nodes.Element) -> None:
         # Keep default behavior (child text passes through), unless this node

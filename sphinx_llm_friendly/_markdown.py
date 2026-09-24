@@ -10,6 +10,7 @@ from sphinx.util import logging
 
 from ._exclude import is_excluded
 from ._llm import prepare_doctree_for_llm
+from ._llms_txt import docs_path_prefix
 from ._translator import MarkdownTranslator
 
 if TYPE_CHECKING:
@@ -70,6 +71,7 @@ def write_llms_full_txt(app: Sphinx) -> None:
     """
     env = app.env
     content_parts = [f"# {app.config.project} Documentation\n\n"]
+    prefix = docs_path_prefix(app.config) or "/"
     for docname in _ordered_docnames(env, app.config.root_doc):
         if is_excluded(env, docname) or is_excluded(
             env, docname, app.config.llm_friendly_llms_full_txt_exclude
@@ -77,7 +79,7 @@ def write_llms_full_txt(app: Sphinx) -> None:
             continue
         rendered = _fragment_path(app, docname).read_text(encoding="utf-8")
         if rendered.strip():
-            content_parts.append(f"Source: /{docname}.md\n\n{rendered}\n\n")
+            content_parts.append(f"Source: {prefix}{docname}.md\n\n{rendered}\n\n")
 
     content = "".join(content_parts)
     # Normalize whitespace while keeping paragraph breaks intact.

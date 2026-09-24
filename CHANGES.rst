@@ -2,6 +2,41 @@
 Release notes
 =============
 
+0.5.0 (unreleased)
+==================
+
+-   Added the ``llm_friendly_llms_full_txt_max_tokens`` setting, which logs a
+    warning when ``llms-full.txt`` exceeds the given number of tokens.
+    Default: ``200_000``. Set it to ``None`` to disable the check.
+
+-   sphinx-design tabs can now be left out of the Markdown output by giving
+    the ``llm-friendly-exclude`` class to their label or content, with the
+    ``class-label`` or ``class-content`` option of ``tab-item``.
+
+-   Fixed "unknown node type" warnings for the ``meta`` directive, now left
+    out of the Markdown output, and for sphinx-design buttons, now rendered
+    as links.
+
+-   References in the Markdown pages no longer link to anchors, which the
+    Markdown output does not have: references to the same page become plain
+    text, and references to other pages link to the whole page.
+
+    References to a section with custom text also show the section heading:
+    as ``foo (see Bar)`` on the same page, and as the link title on others.
+
+-   The Markdown output no longer includes the tables of contents of the
+    ``contents`` directive, nor the section entries of toctrees.
+
+-   Links to external documentation in signatures are now plain text, to
+    reduce the size of the Markdown output.
+
+-   When ``html_baseurl`` has a path, links in ``llms.txt`` now start with a
+    slash, e.g. ``/en/latest/index.md``, so they also work when ``llms.txt``
+    is served from that path.
+
+-   Fixed the ``Source:`` lines of ``llms-full.txt`` missing the path of
+    ``html_baseurl``.
+
 0.4.0 (2026-09-24)
 ==================
 

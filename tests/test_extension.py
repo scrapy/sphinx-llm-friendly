@@ -78,9 +78,11 @@ def test_llms_txt_options(tmp_path: Path) -> None:
         "# Test Project\n\n"
         "> Line 1.\n> Line 2.\n\n"
         "## Docs\n\n"
-        "- [Project](en/latest/index.md)\n"
-        "- [Page 1](en/latest/guide/page1.md)\n"
+        "- [Project](/en/latest/index.md)\n"
+        "- [Page 1](/en/latest/guide/page1.md)\n"
     )
+    llms_full = (output / "llms-full.txt").read_text(encoding="utf-8")
+    assert "Source: /en/latest/index.md" in llms_full
 
 
 def _env(**kwargs: Any) -> BuildEnvironment:
@@ -249,6 +251,60 @@ def test_intersphinx(tmp_path: Path) -> None:
     assert "(https://example.com/guide/page2.md#page-2)" in page1
     assert "(https://example.com/_static/file.html)" in page1
     assert "(https://example.com/b/news.html)" in page1
+
+
+def test_intersphinx_signature(tmp_path: Path) -> None:
+    remote = _project(tmp_path / "remote")
+    (remote / "api.rst").write_text(
+        ":orphan:\n\nAPI\n===\n\n.. py:class:: Remote\n", encoding="utf-8"
+    )
+    inventory = _build(remote, "html") / "objects.inv"
+    conf = (
+        'extensions.append("sphinx.ext.intersphinx")\n'
+        f'intersphinx_mapping = {{"a": ("https://example.com/", "{inventory}")}}\n'
+    )
+    source = _project(tmp_path, conf)
+    (source / "news.rst").write_text(
+        "News\n====\n\n.. py:function:: f(x: Remote) -> Remote\n\n"
+        "   See :py:class:`Remote`.\n",
+        encoding="utf-8",
+    )
+    with mock.patch.object(_intersphinx, "_supports_markdown", return_value=False):
+        output = _build(source, "html")
+    assert (output / "news.md").read_text(encoding="utf-8") == (
+        "# News\n\n### f(x: Remote) → Remote\n\n"
+        "See [`Remote`](https://example.com/api.html#Remote).\n"
+    )
+
+
+def test_internal_references(tmp_path: Path) -> None:
+    source = _project(tmp_path, "smartquotes = False\n")
+    (source / "news.rst").write_text(
+        "News\n====\n\n.. _target:\n\nTarget\n------\n\n"
+        ".. py:function:: f()\n\n"
+        "See :ref:`target`, :py:func:`f` and :ref:`page`.\n\n"
+        "See :ref:`foo <target>`, :ref:`target <target>`, :ref:`bar <section>`,\n"
+        ':ref:`baz <page>` and :ref:`"qux" <quoted>`.\n',
+        encoding="utf-8",
+    )
+    (source / "guide" / "page1.rst").write_text(
+        ".. _page:\n\nPage 1\n======\n\n.. _section:\n\nSection\n-------\n\n"
+        "See :ref:`section`, :ref:`page` and :py:func:`f`.\n\n"
+        '.. _quoted:\n\nA "quoted" \\\\ heading\n-----------------------\n',
+        encoding="utf-8",
+    )
+    output = _build(source, "html")
+    page1 = (output / "guide" / "page1.md").read_text(encoding="utf-8")
+    assert "See Section, Page 1 and [`f()`](../news.md)." in page1
+    news = (output / "news.md").read_text(encoding="utf-8")
+    assert "See Target, `f()` and [Page 1](guide/page1.md)." in news
+    assert (
+        "See foo (see Target), target, "
+        '[bar](guide/page1.md "Section"),\n[baz](guide/page1.md) and '
+        '["qux"](guide/page1.md "A \\"quoted\\" \\\\ heading").'
+    ) in news
+    llms_full = (output / "llms-full.txt").read_text(encoding="utf-8")
+    assert "See foo (see Target), target, bar (see Section)," in llms_full
 
 
 def test_build(tmp_path: Path) -> None:

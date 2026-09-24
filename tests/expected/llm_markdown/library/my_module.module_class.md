@@ -31,4 +31,4 @@ This is a dummy function that does not do anything.
 > [!NOTE]
 > ### See also
 > 
-> [`function()`](my_module.submodule.my_class.md#my_module.submodule.my_class.SubmoduleClass.function)
+> [`function()`](my_module.submodule.my_class.md)

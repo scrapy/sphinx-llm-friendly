@@ -2,4 +2,4 @@
 
 ## Documentation
 
-Some link to a class [`my_module.module_class.ModuleClass`](library/my_module.module_class.md#my_module.module_class.ModuleClass)
+Some link to a class [`my_module.module_class.ModuleClass`](library/my_module.module_class.md)

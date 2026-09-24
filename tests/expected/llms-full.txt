@@ -16,19 +16,6 @@ Explanations and more context for each type of element are provided in
 
 This file covers the following topics.
 
-> ###### Table of content
->
-> * Heading Levels
-> * Paragraph Text and Commented Text
-> * Ordered and Unordered Lists
-> * Conditional Text
-> * Notes and Warnings
-> * Cross-References
-> * Image References
-> * Tables
-> * Code Formatting
-> * Links
-
 ### Heading Levels
 
 The top of the document is heading 1, and this section is heading 2. The following are the rest of the headers.
@@ -301,7 +288,7 @@ For internal cross-references that use text other than the heading for the
 section that you’re linking to, use `:ref:`specified text<Anchor Text>``
 syntax, as in the following example.
 
-If you want to, you can use keyboard shortcuts to create, edit, and view notes.
+If you want to, you can use keyboard shortcuts (see Keyboard Shortcuts for Notes) to create, edit, and view notes.
 
 > [!NOTE]
 > Do not include a space between the last word of the link text and the opening
@@ -620,11 +607,6 @@ textbooks.
 The server generates a new learner engagement report every day for the
 previous day’s activity. On Mondays, an additional report is generated to
 summarize activity during the previous week (Monday through Sunday).
-
-> * Understanding the Learner Engagement Report
->   * Reported Problem Types
->   * Report Columns
-> * Download the Learner Engagement Report
 
 ### Understanding the Learner Engagement Report
 

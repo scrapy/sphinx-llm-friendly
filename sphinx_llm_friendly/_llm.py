@@ -90,6 +90,24 @@ def _undo_sphinx_design_changes(doc: nodes.document) -> None:
         tab_set.parent.replace(tab_set, children)
 
 
+def _flatten_toctree_sections(doc: nodes.document) -> None:
+    # Replace toctree entries for sections with their nested page entries.
+    for compound in doc.findall(nodes.compound):
+        if "toctree-wrapper" not in compound["classes"]:
+            continue
+        for item in reversed(list(compound.findall(nodes.list_item))):
+            reference = next(item.findall(nodes.reference), None)
+            if reference is None or not reference.get("anchorname"):
+                continue
+            children = [
+                child
+                for nested in item.findall(nodes.bullet_list)
+                if nested.parent is item
+                for child in nested.children
+            ]
+            item.parent.replace(item, children)
+
+
 def _prune_empty_containers(doc: nodes.document) -> None:
     changed = True
     while changed:
@@ -110,7 +128,8 @@ def prepare_doctree_for_llm(doc: nodes.document) -> nodes.document:
     """Return a copy of *doc*, as written by the HTML builder, without the
     nodes that are noise in LLM-oriented output: targets, transitions,
     comments, index links, elements with the ``llm-friendly-exclude`` class,
-    and the sections and lists that end up empty as a result.
+    ``contents`` topics, toctree entries for sections, and the sections and
+    lists that end up empty as a result.
     """
     llm_doc = doc.deepcopy()
     _undo_html_changes(llm_doc)
@@ -123,8 +142,11 @@ def prepare_doctree_for_llm(doc: nodes.document) -> nodes.document:
         for node in list(llm_doc.findall(node_type)):
             _remove_node(node)
     for element in list(llm_doc.findall(nodes.Element)):
-        if _is_excluded(element):
+        if _is_excluded(element) or (
+            isinstance(element, nodes.topic) and "contents" in element["classes"]
+        ):
             _remove_node(element)
+    _flatten_toctree_sections(llm_doc)
     _remove_nav_artifact_lists(llm_doc)
     _prune_empty_containers(llm_doc)
     return llm_doc

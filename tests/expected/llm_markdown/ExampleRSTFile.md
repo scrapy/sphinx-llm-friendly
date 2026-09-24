@@ -8,19 +8,6 @@ Explanations and more context for each type of element are provided in
 
 This file covers the following topics.
 
-> ##### Table of content
-> 
-> * [Heading Levels](#heading-levels)
-> * [Paragraph Text and Commented Text](#paragraph-text-and-commented-text)
-> * [Ordered and Unordered Lists](#ordered-and-unordered-lists)
-> * [Conditional Text](#conditional-text)
-> * [Notes and Warnings](#notes-and-warnings)
-> * [Cross-References](#cross-references)
-> * [Image References](#image-references)
-> * [Tables](#tables)
-> * [Code Formatting](#code-formatting)
-> * [Links](#links)
-
 ## Heading Levels
 
 The top of the document is heading 1, and this section is heading 2. The following are the rest of the headers.
@@ -276,7 +263,7 @@ To add a cross-reference to a specific location in a document and use the text
 of the heading for that location as link text, use `:ref:`Anchor Text``
 syntax, as in the following example.
 
-For more information about using keyboard shortcuts, see [Keyboard Shortcuts for Notes](#sfd-sn-keyboard-shortcuts).
+For more information about using keyboard shortcuts, see Keyboard Shortcuts for Notes.
 
 In this example, “SFD SN Keyboard Shortcuts” is the anchor text for a section
 that is titled “Keyboard Shortcuts for Notes”. Readers will see the following
@@ -293,7 +280,7 @@ For internal cross-references that use text other than the heading for the
 section that you’re linking to, use `:ref:`specified text<Anchor Text>``
 syntax, as in the following example.
 
-If you want to, you can use [keyboard shortcuts](#sfd-sn-keyboard-shortcuts) to create, edit, and view notes.
+If you want to, you can use keyboard shortcuts (see Keyboard Shortcuts for Notes) to create, edit, and view notes.
 
 > [!NOTE]
 > Do not include a space between the last word of the link text and the opening
