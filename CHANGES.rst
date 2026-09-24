@@ -2,7 +2,7 @@
 Release notes
 =============
 
-0.5.0 (unreleased)
+0.5.0 (2026-09-24)
 ==================
 
 -   Added the ``llm_friendly_llms_full_txt_max_tokens`` setting, which logs a
