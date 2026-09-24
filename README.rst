@@ -57,6 +57,10 @@ Configuration
     List of patterns, with the syntax of ``exclude_patterns``, of documents to
     leave out of the Markdown output and ``llms.txt``. Default: ``[]``.
 
+``llm_friendly_llms_full_txt_exclude``
+    List of patterns, with the syntax of ``exclude_patterns``, of documents to
+    leave out of ``llms-full.txt`` only. Default: ``[]``.
+
 ``llm_friendly_llms_txt_summary``
     Summary for ``llms.txt``. Default: the first paragraph of the root
     document.

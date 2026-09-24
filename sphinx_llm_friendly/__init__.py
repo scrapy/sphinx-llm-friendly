@@ -202,6 +202,9 @@ def setup(app: Sphinx) -> ExtensionMetadata:
 
     app.add_config_value("llm_friendly_exclude", [], "env", types=frozenset({list}))
     app.add_config_value(
+        "llm_friendly_llms_full_txt_exclude", [], "", types=frozenset({list})
+    )
+    app.add_config_value(
         "llm_friendly_llms_txt_summary",
         None,
         "html",

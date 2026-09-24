@@ -10,6 +10,7 @@ from sphinx.util import logging
 from sphinx.util.osutil import ensuredir, os_path
 
 from ._builder import MarkdownBuilder
+from ._exclude import is_excluded
 from ._llm import prepare_doctree_for_llm
 from ._writer import MarkdownWriter
 
@@ -84,8 +85,10 @@ class SingleFileMarkdownBuilder(MarkdownBuilder):
     def _write_single_markdown(self) -> None:
         root_doc = self.config.root_doc
         content_parts = [f"# {self.config.project} Documentation\n\n"]
+        exclude = self.config.llm_friendly_llms_full_txt_exclude
         for docname in self._ordered_docnames(root_doc):
-            self._append_doc_content(content_parts, docname)
+            if not is_excluded(self.app, docname, exclude):
+                self._append_doc_content(content_parts, docname)
 
         content = "".join(content_parts)
         # Normalize whitespace while keeping paragraph breaks intact.

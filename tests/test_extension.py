@@ -130,6 +130,16 @@ def test_exclude(tmp_path: Path, builder: str) -> None:
     assert "Page 1" not in content
 
 
+def test_llms_full_txt_exclude(tmp_path: Path) -> None:
+    conf = 'llm_friendly_llms_full_txt_exclude = ["guide/page1*"]\n'
+    output = build(_project(tmp_path, conf), tmp_path / "build")
+    llms_full = (output / "llms-full.txt").read_text(encoding="utf-8")
+    assert "Source: /index.md" in llms_full
+    assert "Page 1" not in llms_full
+    assert (output / "guide" / "page1.md").exists()
+    assert "guide/page1.md" in (output / "llms.txt").read_text(encoding="utf-8")
+
+
 def test_intersphinx(tmp_path: Path) -> None:
     file = tmp_path / "file.md"
     file.write_text(

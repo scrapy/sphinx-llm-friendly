@@ -17,11 +17,13 @@ def _matchers(patterns: tuple[str, ...]) -> list[Callable[[str], bool]]:
     return compile_matchers(patterns)  # type: ignore[return-value]
 
 
-def is_excluded(app: Sphinx, docname: str) -> bool:
-    """Return whether *docname* matches ``llm_friendly_exclude``, with the
-    semantics of ``exclude_patterns``.
+def is_excluded(app: Sphinx, docname: str, patterns: list[str] | None = None) -> bool:
+    """Return whether *docname* matches *patterns*, ``llm_friendly_exclude``
+    by default, with the semantics of ``exclude_patterns``.
     """
     path = PurePath(app.env.doc2path(docname, False))
     candidates = [path.as_posix()] + [parent.as_posix() for parent in path.parents[:-1]]
-    matchers = _matchers(tuple(app.config.llm_friendly_exclude))
+    matchers = _matchers(
+        tuple(app.config.llm_friendly_exclude if patterns is None else patterns)
+    )
     return any(matcher(c) for matcher in matchers for c in candidates)
