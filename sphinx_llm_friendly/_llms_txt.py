@@ -76,6 +76,6 @@ def write_llms_txt(app: Sphinx) -> None:
         for docname in _page_order(
             env, root_doc, config.llm_friendly_llms_txt_toctree_only
         )
-        if not is_excluded(app, docname)
+        if not is_excluded(env, docname)
     )
     Path(app.outdir, "llms.txt").write_text("".join(lines), encoding="utf-8")

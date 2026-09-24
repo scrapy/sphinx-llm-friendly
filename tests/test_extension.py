@@ -20,8 +20,15 @@ DOCS = {
         "Project\n=======\n\nThe *first* paragraph.\n\n"
         ".. toctree::\n\n   guide/page1\n   guide/page2\n   news\n"
     ),
-    "guide/page1.rst": "Page 1\n======\n\nSee https://example.com/a.html.\n",
-    "guide/page2.rst": "Page 2\n======\n",
+    "guide/page1.rst": (
+        "Page 1\n======\n\n"
+        "See https://example.com/guide/page2.html#page-2,\n"
+        "https://example.com/_static/file.html and https://example.com/b/news.html.\n"
+    ),
+    "guide/page2.rst": (
+        "Page 2\n======\n\nSee :doc:`page1` and :doc:`/news`.\n\n"
+        ".. container:: llm-friendly-exclude\n\n   Hidden.\n"
+    ),
     "news.rst": "News\n====\n",
     "orphan.rst": ":orphan:\n\nOrphan\n======\n",
 }
@@ -121,57 +128,53 @@ def test_html(tmp_path: Path) -> None:
     assert 'type="text/markdown"' not in news
 
 
-@pytest.mark.parametrize("builder", ["llm_markdown", "llm_singlemarkdown"])
-def test_exclude(tmp_path: Path, builder: str) -> None:
-    conf = 'llm_friendly_exclude = ["guide/*"]\n'
-    output = _build(_project(tmp_path, conf), builder)
-    content = "".join(file.read_text(encoding="utf-8") for file in output.rglob("*.md"))
-    assert "Project" in content
-    assert "Page 1" not in content
+def test_markdown(tmp_path: Path) -> None:
+    conf = 'llm_friendly_exclude = ["news.rst"]\n'
+    output = _build(_project(tmp_path, conf), "html")
+    page2 = (output / "guide" / "page2.md").read_text(encoding="utf-8")
+    assert "See [Page 1](page1.md) and [News](../news.html)." in page2
+    assert "Hidden" not in page2
+    assert "Hidden" in (output / "guide" / "page2.html").read_text(encoding="utf-8")
+    assert not (output / "news.md").exists()
+    llms_full = (output / "llms-full.txt").read_text(encoding="utf-8")
+    assert "Source: /guide/page2.md" in llms_full
+    assert "Source: /news.md" not in llms_full
 
 
 def test_llms_full_txt_exclude(tmp_path: Path) -> None:
     conf = 'llm_friendly_llms_full_txt_exclude = ["guide/page1*"]\n'
-    output = build(_project(tmp_path, conf), tmp_path / "build")
+    output = _build(_project(tmp_path, conf), "html")
     llms_full = (output / "llms-full.txt").read_text(encoding="utf-8")
     assert "Source: /index.md" in llms_full
-    assert "Page 1" not in llms_full
+    assert "Source: /guide/page1.md" not in llms_full
     assert (output / "guide" / "page1.md").exists()
     assert "guide/page1.md" in (output / "llms.txt").read_text(encoding="utf-8")
 
 
 def test_intersphinx(tmp_path: Path) -> None:
-    file = tmp_path / "file.md"
-    file.write_text(
-        "[a](https://a.example/a/b.html#c) [b](https://b.example/b.html) "
-        "[c](https://c.example/c.html)\n",
-        encoding="utf-8",
+    inventory = _build(_project(tmp_path / "remote"), "html") / "objects.inv"
+    conf = (
+        'extensions.append("sphinx.ext.intersphinx")\n'
+        "intersphinx_mapping = {\n"
+        f'    "a": ("https://example.com/", "{inventory}"),\n'
+        f'    "b": ("https://example.com/b/", "{inventory}"),\n'
+        "}\n"
     )
     with mock.patch.object(
         _intersphinx,
         "_supports_markdown",
-        lambda url: url == "https://a.example/a/",
+        lambda url: url == "https://example.com/",
     ):
-        _intersphinx.rewrite_intersphinx_links(
-            [file], {"https://a.example/a/", "https://b.example/"}
-        )
-    assert file.read_text(encoding="utf-8") == (
-        "[a](https://a.example/a/b.md#c) [b](https://b.example/b.html) "
-        "[c](https://c.example/c.html)\n"
-    )
+        output = _build(_project(tmp_path, conf), "html")
+    page1 = (output / "guide" / "page1.md").read_text(encoding="utf-8")
+    assert "(https://example.com/guide/page2.md#page-2)" in page1
+    assert "(https://example.com/_static/file.html)" in page1
+    assert "(https://example.com/b/news.html)" in page1
 
 
 def test_build(tmp_path: Path) -> None:
-    conf = (
-        'extensions.append("sphinx.ext.intersphinx")\n'
-        'intersphinx_mapping = {"e": ("https://example.com/", "missing.inv")}\n'
-    )
-    with mock.patch.object(_intersphinx, "_supports_markdown", return_value=True):
-        output = build(_project(tmp_path, conf), tmp_path / "build")
+    with pytest.warns(DeprecationWarning):
+        output = build(_project(tmp_path), tmp_path / "build")
     assert output == tmp_path / "build" / "all"
-    assert (output / "guide" / "page1.html").exists()
-    page1 = (output / "guide" / "page1.md").read_text(encoding="utf-8")
-    assert "https://example.com/a.md" in page1
-    assert (output / "llms.txt").exists()
-    llms_full = (output / "llms-full.txt").read_text(encoding="utf-8")
-    assert llms_full.startswith("# Test Project Documentation\n\nSource: /index.md")
+    assert (output / "guide" / "page1.md").exists()
+    assert (output / "llms-full.txt").exists()

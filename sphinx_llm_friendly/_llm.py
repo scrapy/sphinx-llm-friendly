@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import posixpath
+
 from docutils import nodes
 
-_NAV_ARTIFACT_TEXTS = frozenset({"genindex", "modindex", "search"})
+_NAV_ARTIFACT_PAGES = frozenset({"genindex.html", "py-modindex.html", "search.html"})
 
 
 def _remove_node(node: nodes.Node) -> None:
@@ -10,9 +12,11 @@ def _remove_node(node: nodes.Node) -> None:
         node.parent.remove(node)
 
 
-def _is_nav_artifact_list_item(node: nodes.Node) -> bool:
-    text = " ".join(node.astext().split()).strip().lower()
-    return text in _NAV_ARTIFACT_TEXTS
+def _is_nav_artifact_list_item(node: nodes.Element) -> bool:
+    return any(
+        posixpath.basename(reference.get("refuri", "")) in _NAV_ARTIFACT_PAGES
+        for reference in node.findall(nodes.reference)
+    )
 
 
 def _remove_nav_artifact_lists(doc: nodes.document) -> None:
@@ -24,6 +28,31 @@ def _remove_nav_artifact_lists(doc: nodes.document) -> None:
         ]
         if list_items and all(_is_nav_artifact_list_item(item) for item in list_items):
             _remove_node(bullet_list)
+
+
+def _undo_html_changes(doc: nodes.document) -> None:
+    # The HTML writer gives specific admonitions (note, warning, …) a title,
+    # html_scaled_image_link wraps scaled images in a link to themselves, and
+    # sphinx.ext.viewcode adds [source] links to the highlighted source code.
+    for admonition in list(doc.findall(nodes.Element)):
+        title = admonition.children[0] if admonition.children else None
+        if (
+            isinstance(admonition, nodes.Admonition)
+            and isinstance(title, nodes.title)
+            and title.rawsource == type(admonition).__name__
+        ):
+            admonition.remove(title)
+    for image in list(doc.findall(nodes.image)):
+        reference = image.parent
+        if (
+            isinstance(reference, nodes.reference)
+            and reference.get("refuri") == image["uri"]
+            and len(reference.children) == 1
+        ):
+            reference.replace_self(image)
+    for inline in list(doc.findall(nodes.inline)):
+        if "viewcode-link" in inline["classes"]:
+            _remove_node(inline.parent)
 
 
 def _prune_empty_containers(doc: nodes.document) -> None:
@@ -43,14 +72,19 @@ def _prune_empty_containers(doc: nodes.document) -> None:
 
 
 def prepare_doctree_for_llm(doc: nodes.document) -> nodes.document:
-    """Return a copy of *doc* without the nodes that are noise in LLM-oriented
-    output: targets, transitions, comments, index links, and the sections and
-    lists that end up empty as a result.
+    """Return a copy of *doc*, as written by the HTML builder, without the
+    nodes that are noise in LLM-oriented output: targets, transitions,
+    comments, index links, elements with the ``llm-friendly-exclude`` class,
+    and the sections and lists that end up empty as a result.
     """
     llm_doc = doc.deepcopy()
+    _undo_html_changes(llm_doc)
     for node_type in (nodes.target, nodes.transition, nodes.comment):
         for node in list(llm_doc.findall(node_type)):
             _remove_node(node)
+    for element in list(llm_doc.findall(nodes.Element)):
+        if "llm-friendly-exclude" in element["classes"]:
+            _remove_node(element)
     _remove_nav_artifact_lists(llm_doc)
     _prune_empty_containers(llm_doc)
     return llm_doc

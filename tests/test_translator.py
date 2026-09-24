@@ -19,8 +19,6 @@ if TYPE_CHECKING:
 def make_mock() -> MarkdownTranslator:
     document = Mock(name="document")
     builder = Mock(name="builder")
-    builder.name = "llm_markdown"
-    builder.heading_level_offset = 0
     return MarkdownTranslator(document, builder)
 
 

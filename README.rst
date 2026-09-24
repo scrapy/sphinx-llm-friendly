@@ -34,21 +34,16 @@ Setup
             "sphinx_llm_friendly",
         ]
 
-#.  Build your documentation:
+#.  Build your documentation with the ``html`` builder:
 
     .. code-block:: shell
 
-        sphinx-llm-friendly build docs docs/_build
+        sphinx-build -b html docs docs/_build/html
 
-    The output is in ``docs/_build/all``.
-
-    It runs the ``html``, ``llm_markdown`` and ``llm_singlemarkdown`` builders
-    in parallel, into subdirectories of ``docs/_build``, and merges their
-    output. In the Markdown output, links to sites from ``intersphinx_mapping``
-    that serve Markdown point to the Markdown version of their pages.
-
-    From Python, call ``sphinx_llm_friendly.build(source_dir, build_dir)``,
-    which returns the output directory.
+    The Markdown pages, ``llms.txt`` and ``llms-full.txt`` are written next to
+    the HTML pages. In the Markdown output, links to sites from
+    ``intersphinx_mapping`` that serve Markdown point to the Markdown version
+    of their pages.
 
 Configuration
 =============
@@ -69,6 +64,9 @@ Configuration
     If ``True``, ``llms.txt`` only lists documents reachable through toctrees
     from the root document. Default: ``False``.
 
-Nodes from third-party extensions need Markdown handlers, registered with
-``app.add_node()`` for the ``llm_markdown`` and ``llm_singlemarkdown``
-builders.
+To leave content out of the Markdown output, give it the
+``llm-friendly-exclude`` class, e.g. with the ``container`` directive.
+
+Nodes from third-party extensions that are still in the doctree when HTML is
+written need Markdown handlers, registered with ``app.add_node()`` as
+``llm_markdown``.

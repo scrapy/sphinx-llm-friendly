@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Any
 
 from sphinx.util.osutil import relative_uri
 
-from ._build import build, remember_intersphinx_urls
-from ._builder import MarkdownBuilder
+from ._build import build
 from ._exclude import is_excluded
+from ._intersphinx import find_markdown_sites
 from ._llms_txt import write_llms_txt
-from ._singlemarkdown import SingleFileMarkdownBuilder
+from ._markdown import write_llms_full_txt, write_markdown
 
 if TYPE_CHECKING:
     from docutils import nodes
@@ -161,28 +161,21 @@ _COPY_AS_MARKDOWN_BUTTON_JS = """
 
 
 def _on_builder_inited(app: Sphinx) -> None:
-    if isinstance(app.builder, MarkdownBuilder):
-        app.config.exclude_patterns = [
-            *app.config.exclude_patterns,
-            *app.config.llm_friendly_exclude,
-        ]
-    elif app.builder.format == "html":
+    if app.builder.name == "html":
         app.add_js_file(None, body=_COPY_AS_MARKDOWN_BUTTON_JS)
+        find_markdown_sites(app)
 
 
-def _add_markdown_alternate_link(
+def _on_html_page_context(
     app: Sphinx,
     pagename: str,
     templatename: str,
     context: dict[str, Any],
     doctree: nodes.document | None,
 ) -> None:
-    if (
-        app.builder.format != "html"
-        or pagename not in app.env.found_docs
-        or is_excluded(app, pagename)
-    ):
+    if app.builder.name != "html" or doctree is None or is_excluded(app.env, pagename):
         return
+    write_markdown(app, pagename, doctree)
     html_uri = app.builder.get_target_uri(pagename)
     md_uri = f"{posixpath.splitext(html_uri)[0]}.md"
     href = relative_uri(html_uri, md_uri)
@@ -192,15 +185,13 @@ def _add_markdown_alternate_link(
 
 
 def _on_build_finished(app: Sphinx, exception: Exception | None) -> None:
-    if exception is None and app.builder.name in {"html", "dirhtml"}:
+    if exception is None and app.builder.name == "html":
         write_llms_txt(app)
+        write_llms_full_txt(app)
 
 
 def setup(app: Sphinx) -> ExtensionMetadata:
-    app.add_builder(MarkdownBuilder)
-    app.add_builder(SingleFileMarkdownBuilder)
-
-    app.add_config_value("llm_friendly_exclude", [], "env", types=frozenset({list}))
+    app.add_config_value("llm_friendly_exclude", [], "html", types=frozenset({list}))
     app.add_config_value(
         "llm_friendly_llms_full_txt_exclude", [], "", types=frozenset({list})
     )
@@ -214,10 +205,10 @@ def setup(app: Sphinx) -> ExtensionMetadata:
         "llm_friendly_llms_txt_toctree_only", False, "html", types=frozenset({bool})
     )
 
-    app.connect("builder-inited", _on_builder_inited)
-    app.connect("html-page-context", _add_markdown_alternate_link)
+    # After sphinx.ext.intersphinx loads its inventories.
+    app.connect("builder-inited", _on_builder_inited, priority=900)
+    app.connect("html-page-context", _on_html_page_context)
     app.connect("build-finished", _on_build_finished)
-    app.connect("build-finished", remember_intersphinx_urls)
 
     return {
         "version": version("sphinx-llm-friendly"),

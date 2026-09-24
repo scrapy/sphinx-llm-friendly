@@ -36,10 +36,6 @@ maintainers = [{ name = "Scrapy developers", email = "opensource@zyte.com" }]
 [project.scripts]
 sphinx-llm-friendly = "sphinx_llm_friendly._build:main"
 
-[project.entry-points."sphinx.builders"]
-llm_markdown = "sphinx_llm_friendly"
-llm_singlemarkdown = "sphinx_llm_friendly"
-
 [project.urls]
 Source = "https://github.com/scrapy/sphinx-llm-friendly"
 Tracker = "https://github.com/scrapy/sphinx-llm-friendly/issues"

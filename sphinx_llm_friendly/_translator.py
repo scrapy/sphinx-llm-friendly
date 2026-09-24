@@ -5,10 +5,10 @@ import posixpath
 import re
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, TypeVar
+from urllib.parse import urlsplit, urlunsplit
 
 from docutils import nodes
 from sphinx.util.docutils import SphinxTranslator
-from sphinx.util.osutil import relative_uri
 
 from ._contexts import (
     DOC_INFO_CONTEXT,
@@ -30,9 +30,11 @@ from ._contexts import (
     WrappedContext,
 )
 from ._escape import escape_markdown_chars
+from ._exclude import is_excluded
+from ._intersphinx import to_markdown_url
 
 if TYPE_CHECKING:
-    from ._builder import MarkdownBuilder
+    from sphinx.builders.html import StandaloneHTMLBuilder
 
 VISIT_DEPART_PATTERN = re.compile("(visit|depart)_(.+)")
 SKIP = UniqueString("skip")
@@ -144,9 +146,17 @@ def pushing_status(method: _F) -> _F:
 
 
 class MarkdownTranslator(SphinxTranslator):
-    def __init__(self, document: nodes.document, builder: MarkdownBuilder):
+    def __init__(
+        self,
+        document: nodes.document,
+        builder: StandaloneHTMLBuilder,
+        single_file: bool = False,
+    ):
         super().__init__(document, builder)
-        self.builder: MarkdownBuilder = builder
+        self.builder: StandaloneHTMLBuilder = builder
+        # In llms-full.txt, the documentation title is the only H1, internal
+        # links become plain text, and local files are relative to the root.
+        self._single_file = single_file
         # Warn only once per writer about unsupported elements
         self._warned: set[str] = set()
 
@@ -163,7 +173,7 @@ class MarkdownTranslator(SphinxTranslator):
         self._ctx_queue.append(ctx)
 
     def _title_level(self, base_level: int) -> int:
-        return min(6, max(1, base_level + self.builder.heading_level_offset))
+        return min(6, max(1, base_level + int(self._single_file)))
 
     def _pop_context(self, _node: nodes.Node | None = None, count: int = 1) -> None:
         for _ in range(count):
@@ -325,6 +335,8 @@ class MarkdownTranslator(SphinxTranslator):
     def visit_image(self, node: nodes.Element) -> None:
         """Image directive."""
         uri = node["uri"]
+        if self._single_file and uri.startswith(f"{self.builder.imgpath}/"):
+            uri = posixpath.join("_images", posixpath.basename(uri))
         alt = node.attributes.get("alt", "image")
         # We don't need to add EOL before/after the image.
         # It will be handled by the visit/depart handlers of the paragraph.
@@ -506,16 +518,28 @@ class MarkdownTranslator(SphinxTranslator):
     def _fetch_ref_uri(self, node: nodes.Element) -> str:
         uri = node.get("refuri", "")
 
-        # Do not modify external URL in any way
         if not node.get("internal", self.status.default_ref_internal):
-            return uri
+            return to_markdown_url(uri)
 
         # Whatever the URL is, add the anchor to it
         ref_id = node.get("refid", None)
         if ref_id is not None:
-            uri = f"#{ref_id}"
+            return f"#{ref_id}"
 
-        return uri
+        return self._markdown_page_uri(uri)
+
+    def _markdown_page_uri(self, uri: str) -> str:
+        parts = urlsplit(uri)
+        if not parts.path.endswith(".html"):
+            return uri
+        page_uri = self.builder.get_target_uri(self.builder.current_docname)
+        docname = posixpath.normpath(
+            posixpath.join(posixpath.dirname(page_uri), parts.path[:-5])
+        )
+        env = self.builder.env
+        if docname not in env.found_docs or is_excluded(env, docname):
+            return uri
+        return urlunsplit(parts._replace(path=f"{parts.path[:-5]}.md"))
 
     @pushing_context
     def visit_reference(self, node: nodes.Element) -> None:
@@ -524,7 +548,7 @@ class MarkdownTranslator(SphinxTranslator):
             raise nodes.SkipNode
 
         is_internal = bool(node.get("internal", self.status.default_ref_internal))
-        if self.builder.name == "llm_singlemarkdown" and is_internal:
+        if self._single_file and is_internal:
             self._push_context(WrappedContext("", ""))
             return
 
@@ -545,15 +569,17 @@ class MarkdownTranslator(SphinxTranslator):
         # For readable internal targets, `filename` is the registered, hashed
         # destination. Link to the copied file relative to the current output page.
         elif "filename" in node:
-            target = relative_uri(
-                self.builder.get_target_uri(self.builder.current_doc_name),
-                posixpath.join(self.builder.download_dir, node["filename"]),
-            )
+            downloads = "_downloads" if self._single_file else self.builder.dlpath
+            target = posixpath.join(downloads, node["filename"])
         # If Sphinx could not register the internal file, only its original
         # `reftarget` remains.
         else:
             target = node.get("reftarget", "")
         self._push_context(WrappedContext("[", f"]({target})"))
+
+    def visit_compound(self, node: nodes.Element) -> None:
+        if self._single_file and "toctree-wrapper" in node["classes"]:
+            raise nodes.SkipNode
 
     @pushing_context
     @pushing_status
@@ -650,7 +676,7 @@ class MarkdownTranslator(SphinxTranslator):
 
         is_internal_href = href and not href.startswith(("http://", "https://"))
 
-        if self.builder.name == "llm_singlemarkdown" and is_internal_href:
+        if self._single_file and is_internal_href:
             self.add(f"{('#' * level)} {title}", prefix_eol=1, suffix_eol=1)
         elif href:
             self.add(f"{('#' * level)} [{title}]({href})", prefix_eol=1, suffix_eol=1)

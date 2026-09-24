@@ -11,6 +11,7 @@ version = "0.6.11"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.viewcode",
     "sphinx_llm_friendly",
     "sphinxcontrib.httpdomain",
 ]
