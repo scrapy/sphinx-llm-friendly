@@ -186,6 +186,24 @@ def test_sphinx_design_excluded_tabs(tmp_path: Path) -> None:
     assert "Three." in html
 
 
+def test_youtube(tmp_path: Path) -> None:
+    source = _project(tmp_path, 'extensions.append("sphinxcontrib.youtube")\n')
+    (source / "news.rst").write_text(
+        "News\n====\n\n"
+        ".. youtube:: AP17jPrlAzY\n   :url_parameters: ?t=5\n\n"
+        ".. vimeo:: 486557682\n\n"
+        ".. peertube:: abc\n   :instance: example.org\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "html"
+    assert main(["-q", "-W", "-b", "html", str(source), str(output)]) == 0
+    assert (output / "news.md").read_text(encoding="utf-8") == (
+        "# News\n\n[Video](https://youtu.be/AP17jPrlAzY?t=5)\n\n"
+        "[Video](https://vimeo.com/486557682)\n\n"
+        "[Video](https://example.org/w/abc)\n"
+    )
+
+
 @pytest.mark.parametrize(("max_tokens", "warns"), [(1, True), (None, False)])
 def test_llms_full_txt_max_tokens(
     tmp_path: Path,
