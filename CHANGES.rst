@@ -2,7 +2,7 @@
 Release notes
 =============
 
-0.5.1 (unreleased)
+0.5.1 (2026-09-25)
 ==================
 
 -   Fixed "unknown node type" warnings for the ``youtube``, ``vimeo`` and
