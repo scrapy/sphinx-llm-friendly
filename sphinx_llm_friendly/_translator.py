@@ -646,6 +646,20 @@ class MarkdownTranslator(SphinxTranslator):
         if self._single_file and "toctree-wrapper" in node["classes"]:
             raise nodes.SkipNode
 
+    def visit_youtube(self, node: nodes.Element) -> None:
+        """sphinxcontrib-youtube video."""
+        # The HTML visitor overwrites node["platform_url"] with an embed URL.
+        base_url = {
+            "youtube": "https://youtu.be/",
+            "vimeo": "https://vimeo.com/",
+            "peertube": f"https://{node['instance']}/w/",
+        }[node["platform"]]
+        url = f"{base_url}{node['id']}{node['url_parameters']}"
+        self.add(f"[Video]({url})", prefix_eol=2, suffix_eol=1)
+        raise nodes.SkipNode
+
+    visit_vimeo = visit_peertube = visit_youtube
+
     @pushing_context
     @pushing_status
     def visit_topic(self, _node: nodes.Element) -> None:
