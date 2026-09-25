@@ -2,6 +2,17 @@
 Release notes
 =============
 
+0.5.1 (unreleased)
+==================
+
+-   Fixed "unknown node type" warnings for the ``youtube``, ``vimeo`` and
+    ``peertube`` directives of sphinxcontrib-youtube, now rendered as links
+    to the video.
+
+-   References with custom text no longer show the section heading when it
+    only differs from that text by a leading number, e.g. a reference with
+    ``Foo`` as text to a ``1. Foo`` section.
+
 0.5.0 (2026-09-24)
 ==================
 
