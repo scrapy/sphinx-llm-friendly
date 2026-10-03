@@ -2,6 +2,21 @@
 Release notes
 =============
 
+0.7.0 (unreleased)
+==================
+
+-   Dropped ``llms-full.txt``, along with the
+    ``llm_friendly_llms_full_txt_exclude`` and
+    ``llm_friendly_llms_full_txt_max_tokens`` settings, which you can remove
+    from your ``conf.py``. ``llms.txt`` and the Markdown pages it links to
+    remain.
+
+    `v2 of the llms.txt specification <https://llmstxt.org/changes.html>`_ no
+    longer covers files with the full documentation content: agents are
+    expected to follow the links in ``llms.txt`` instead.
+
+    tiktoken is no longer a dependency.
+
 0.6.0 (2026-09-30)
 ==================
 
