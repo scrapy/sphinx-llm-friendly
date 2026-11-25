@@ -320,7 +320,9 @@ def test_internal_references(tmp_path: Path) -> None:
 
 
 def test_build(tmp_path: Path) -> None:
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(
+        DeprecationWarning, match="sphinx-llm-friendly command are deprecated"
+    ):
         output = build(_project(tmp_path), tmp_path / "build")
     assert output == tmp_path / "build" / "all"
     assert (output / "guide" / "page1.md").exists()
