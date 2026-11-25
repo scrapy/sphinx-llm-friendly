@@ -264,11 +264,11 @@ class MarkdownTranslator(SphinxTranslator):
         try:
             # First try to get an existing attribute
             return super().__getattribute__(item)
-        except AttributeError as ex:
+        except AttributeError:
             predefined_method = self._find_predefined_method(item)
             if predefined_method is not None:
                 return predefined_method
-            raise ex
+            raise
 
     def _find_predefined_action(
         self, state: str, element: str
